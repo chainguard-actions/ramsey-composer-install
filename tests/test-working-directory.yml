@@ -1,0 +1,39 @@
+name: Test with working-directory input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install PHP
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y php-cli php-mbstring php-xml composer
+      - name: Create subdirectory with composer.json
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/subproject"
+          cat > "$GITHUB_WORKSPACE/subproject/composer.json" <<'EOF'
+          {
+            "name": "test/subproject",
+            "description": "Test subproject",
+            "license": "MIT",
+            "type": "project",
+            "require": {},
+            "config": {
+              "allow-plugins": false
+            }
+          }
+          EOF
+      - id: action
+        uses: .
+        with:
+          dependency-versions: locked
+          working-directory: ${{ github.workspace }}/subproject
+      - name: Assert vendor directory exists in subproject
+        run: |
+          if [ ! -d "$GITHUB_WORKSPACE/subproject/vendor" ]; then
+            echo "FAIL: subproject/vendor directory not found"
+            exit 1
+          fi
+          echo "PASS: vendor directory exists in working-directory"

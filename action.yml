@@ -1,0 +1,138 @@
+name: "Install PHP Dependencies with Composer"
+author: "Ben Ramsey"
+description: >-
+  Installs and caches PHP dependencies with Composer, accepting arguments to configure how and what to install.
+branding:
+  icon: download
+  color: purple
+inputs:
+  dependency-versions:
+    description: >-
+      The version of dependencies to prefer (`lowest`, `highest`, or `locked`).
+    required: true
+    default: "locked"
+  composer-options:
+    description: >-
+      Additional options to pass to Composer (e.g. `--ignore-platform-reqs`).
+    required: false
+  working-directory:
+    description: >-
+      The directory where composer.json is located, if it is not in the repository root.
+    required: false
+  ignore-cache:
+    description: >-
+      Whether to ignore the cache. Values accepted: `'yes'`, `true`, `1`.
+    required: false
+  custom-cache-key:
+    description: >-
+      A custom cache key to use instead of an auto-generated cache key.
+    required: false
+  custom-cache-suffix:
+    description: >-
+      A custom suffix to add to the auto-generated cache key.
+    required: false
+  require-lock-file:
+    description: >-
+      Require lock file for install command.
+    required: false
+    default: "false"
+  composer-filename:
+    description: >-
+      The Composer filename to use, without the extension (e.g. `composer`, `composer-gh-actions`, `composer-staging`). Please note: this is not a path. If you need to specify a different path, use `working-directory`.
+    required: false
+    default: "composer"
+runs:
+  using: "composite"
+  steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    - name: "Determine PHP version"
+      id: "php"
+      shell: "bash"
+      run: "${GITHUB_ACTION_PATH}/bin/php_version.sh"
+    - name: "Determine whether we should ignore caching"
+      id: "should-cache"
+      shell: "bash"
+      env:
+        IGNORE_CACHE: ${{ inputs.ignore-cache }}
+      run: '${GITHUB_ACTION_PATH}/bin/should_cache.sh "$IGNORE_CACHE"'
+    - name: "Determine Composer paths"
+      id: "composer"
+      shell: "bash"
+      env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        PHP_PATH: ${{ steps.php.outputs.path }}
+        COMPOSER_FILENAME: ${{ inputs.composer-filename }}
+      run: |
+        ${GITHUB_ACTION_PATH}/bin/composer_paths.sh \
+          "" \
+          "$WORKING_DIRECTORY" \
+          "$PHP_PATH" \
+          "$COMPOSER_FILENAME"
+    - name: "Determine cache key"
+      id: "cache-key"
+      if: steps.should-cache.outputs.do-cache == 1
+      shell: "bash"
+      env:
+        RUNNER_OS: ${{ runner.os }}
+        PHP_VERSION: ${{ steps.php.outputs.version }}
+        DEPENDENCY_VERSIONS: ${{ inputs.dependency-versions }}
+        COMPOSER_OPTIONS: ${{ inputs.composer-options }}
+        FILES_HASH: ${{ hashFiles(format('**/{0}.json', inputs.composer-filename), format('**/{0}.lock', inputs.composer-filename)) }}
+        CUSTOM_CACHE_KEY: ${{ inputs.custom-cache-key }}
+        CUSTOM_CACHE_SUFFIX: ${{ inputs.custom-cache-suffix }}
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: |
+        ${GITHUB_ACTION_PATH}/bin/cache_key.sh \
+          "$RUNNER_OS" \
+          "$PHP_VERSION" \
+          "$DEPENDENCY_VERSIONS" \
+          "$COMPOSER_OPTIONS" \
+          "$FILES_HASH" \
+          "$CUSTOM_CACHE_KEY" \
+          "$CUSTOM_CACHE_SUFFIX" \
+          "$WORKING_DIRECTORY"
+    - name: "Cache Composer dependencies"
+      if: steps.should-cache.outputs.do-cache == 1
+      uses: "actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809" # v4.2.4
+      with:
+        path: "${{ steps.composer.outputs.cache-dir }}"
+        key: "${{ steps.cache-key.outputs.key }}"
+        restore-keys: |
+          ${{ env.CACHE_RESTORE_KEY }}
+    - name: "Install Composer dependencies"
+      shell: "bash"
+      env:
+        DEPENDENCY_VERSIONS: ${{ inputs.dependency-versions }}
+        COMPOSER_OPTIONS: ${{ inputs.composer-options }}
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        PHP_PATH: ${{ steps.php.outputs.path }}
+        COMPOSER_COMMAND: ${{ steps.composer.outputs.composer_command }}
+        COMPOSER_LOCK: ${{ steps.composer.outputs.lock }}
+        REQUIRE_LOCK_FILE: ${{ inputs.require-lock-file }}
+        COMPOSER_FILENAME: ${{ inputs.composer-filename }}
+      run: |
+        ${GITHUB_ACTION_PATH}/bin/composer_install.sh \
+          "$DEPENDENCY_VERSIONS" \
+          "$COMPOSER_OPTIONS" \
+          "$WORKING_DIRECTORY" \
+          "$PHP_PATH" \
+          "$COMPOSER_COMMAND" \
+          "$COMPOSER_LOCK" \
+          "$REQUIRE_LOCK_FILE" \
+          "$COMPOSER_FILENAME" \

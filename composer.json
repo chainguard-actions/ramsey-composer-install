@@ -1,0 +1,21 @@
+{
+    "name": "ramsey/composer-install-test",
+    "description": "Tests Composer installation using this GitHub Action and sets up development tooling.",
+    "license": "MIT",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Ben Ramsey",
+            "email": "ben@benramsey.com"
+        }
+    ],
+    "require-dev": {
+        "ehime/hello-world": "^1.0.0"
+    },
+    "config": {
+        "allow-plugins": false
+    },
+    "scripts": {
+        "test": "./tests/test_helper/bats/bin/bats tests/"
+    }
+}
