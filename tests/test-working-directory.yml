@@ -1,0 +1,22 @@
+name: Test working-directory input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          dependency-versions: highest
+          working-directory: ${{ github.workspace }}/actions/hardened/ramsey--composer-install/4.0.0/tests/fixtures/no-lock-file
+      - name: Assert vendor directory was created in working-directory
+        run: |
+          DIR="${GITHUB_WORKSPACE}/actions/hardened/ramsey--composer-install/4.0.0/tests/fixtures/no-lock-file/vendor"
+          echo "Checking for vendor dir at: $DIR"
+          if [ ! -d "$DIR" ]; then
+            echo "FAIL: vendor directory not found at $DIR"
+            exit 1
+          fi
+          echo "PASS: vendor directory exists in specified working-directory"

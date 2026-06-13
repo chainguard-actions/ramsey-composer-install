@@ -1,1 +1,314 @@
-# ramsey-composer-install
+<h1 align="center">ramsey/composer-install</h1>
+
+<p align="center">
+    <strong>A GitHub Action to streamline installation of PHP dependencies with Composer.</strong>
+</p>
+
+<p align="center">
+    <a href="https://github.com/ramsey/composer-install"><img src="https://img.shields.io/badge/source-ramsey/composer--install-blue.svg?style=flat-square" alt="Source Code"></a>
+    <a href="https://github.com/ramsey/composer-install/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-darkcyan.svg?style=flat-square" alt="Read License"></a>
+    <a href="https://github.com/ramsey/composer-install/actions/workflows/continuous-integration.yml"><img src="https://img.shields.io/github/actions/workflow/status/ramsey/composer-install/continuous-integration.yml?branch=v4&logo=github&style=flat-square" alt="Build Status"></a>
+    <a href="https://codecov.io/gh/ramsey/composer-install"><img src="https://img.shields.io/codecov/c/gh/ramsey/composer-install/v4?label=codecov&logo=codecov&style=flat-square" alt="Codecov Code Coverage"></a>
+</p>
+
+## About
+
+ramsey/composer-install is a GitHub Action to streamline installation of
+Composer dependencies in workflows. It installs your Composer dependencies and
+caches them for improved build times.
+
+This project adheres to a [code of conduct](CODE_OF_CONDUCT.md).
+By participating in this project and its community, you are expected to
+uphold this code.
+
+## Dependencies
+
+This GitHub Action requires [PHP](https://www.php.net) and
+[Composer](https://getcomposer.org). One way to ensure you have both is to use
+the [Setup PHP GitHub Action](https://github.com/shivammathur/setup-php).
+
+The step that sets up PHP and Composer for your environment *must* come before
+the ramsey/composer-install step.
+
+## Usage
+
+Use ramsey/composer-install as step within a job. This example also shows use of
+the [Setup PHP](https://github.com/shivammathur/setup-php) action as a step.
+
+```yaml
+- uses: "shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f" # 2.37.0
+  with:
+    php-version: "latest"
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+```
+
+> [!TIP]
+> There is no need to set up a separate caching step since ramsey/composer-install handles this for you.
+
+### Input Parameters
+
+#### dependency-versions
+
+The `dependency-versions` input parameter allows you to select whether the job
+should install the locked, highest, or lowest versions of Composer dependencies.
+
+Valid values are:
+
+* `locked`: (default) installs the locked versions of Composer dependencies
+  (equivalent to running `composer install`)
+
+* `highest`: installs the highest versions of Composer dependencies
+  (equivalent to running `composer update`)
+
+* `lowest`: installs the lowest versions of Composer dependencies (equivalent
+  to running `composer update --prefer-lowest --prefer-stable`)
+
+For example:
+
+```yaml
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+  with:
+    dependency-versions: "lowest"
+```
+
+#### composer-options
+
+ramsey/composer-install always passes the `--no-interaction`, `--no-progress`,
+and `--ansi` options to the `composer` command. If you'd like to pass additional
+options, you may use the `composer-options` input parameter.
+
+For example:
+
+```yaml
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+  with:
+    composer-options: "--ignore-platform-reqs --optimize-autoloader"
+```
+
+#### composer-filename
+
+If you have a custom Composer filename, you may use `composer-filename` to change
+the filename Composer uses. For example, your Composer file could be
+`composer-gh-actions.json` or `composer-staging.json` instead of the default
+`composer.json`.
+
+You should specify the filename without the extension, since it will determine
+both the JSON and lock filenames to use. The default value is `"composer"`,
+which will use `composer.json` and `composer.lock` as the filenames.
+
+For example:
+
+```yaml
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+  with:
+    composer-filename: "composer-gh-actions"
+```
+
+#### working-directory
+
+The `working-directory` input parameter allows you to specify a different
+location for your `composer.json` file. For example, if your `composer.json` is
+located in `packages/acme-foo/`, use `working-directory` to tell
+ramsey/composer-install where to run things.
+
+```yaml
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+  with:
+    working-directory: "packages/acme-foo"
+```
+
+You may use this step as many times as needed, if you have multiple
+`composer.json` files.
+
+For example:
+
+```yaml
+# Install dependencies using composer.json in the root.
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+
+# Install dependencies using composer.json in src/Component/Config/
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+  with:
+    working-directory: "src/Component/Config"
+
+# Install dependencies using composer.json in src/Component/Validator/
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+  with:
+    working-directory: "src/Component/Validator"
+```
+
+#### ignore-cache
+
+Normally, ramsey/composer-install preserves composer's cache between jobs
+so that subsequent identically-invoked jobs execute faster.
+If you have jobs for which you wish to completely ignore the caching step, you
+may use the `ignore-cache` input parameter. When present, ramsey/composer-install
+will neither read from nor write to the cache.
+
+Values of `'yes'`, `true`, or `1` will tell the action to ignore the cache. For
+any other value, the action will use the default behavior, which is to read from
+and store to the cache.
+
+```yaml
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+  with:
+    ignore-cache: "yes"
+```
+
+#### custom-cache-key
+
+There may be times you wish to specify your own cache key. You may do so with
+the `custom-cache-key` input parameter. When provided, ramsey/composer-install
+will not use the auto-generated cache key, so if your `composer.json` or
+`composer.lock` files change, you'll need to update the custom cache key if you
+wish to update the cache.
+
+```yaml
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+  with:
+    custom-cache-key: "my-custom-cache-key"
+```
+
+#### custom-cache-suffix
+
+`ramsey/composer-install` will auto-generate a cache key which is composed of
+the following elements:
+* The OS image name, like `Linux`, `Windows`, etc.
+* The exact PHP version, like `8.5.4`.
+* The options passed via `composer-options`.
+* The dependency version setting as per `dependency-versions`.
+* The working directory as per `working-directory`.
+* A hash of the `composer.json` and/or `composer.lock` files.
+
+If you don't want to generate your own cache key, but do want to make the cache key
+even more specific, you can specify a suffix to be added to the cache key via the
+`custom-cache-suffix` parameter.
+
+```yaml
+# Adds a suffix to the cache key which is equivalent to the full date-time
+# of "last Monday 00:00", which means that the cache will be force refreshed
+# via the first workflow which is run every Monday.
+- uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+  with:
+    custom-cache-suffix: $(/bin/date -u --date='last Mon' "+%F")
+```
+
+> [!WARNING]
+> Specifying a `custom-cache-key` will take precedence over the `custom-cache-suffix`.
+
+
+#### require-lock-file
+
+By default, if no composer.lock file is found in the working directory
+ramsey/composer-install will invoke `composer update` regardless of the value of
+`dependency-versions`.
+
+If this is set to a value of `true`, ramsey/composer-install will fail in its
+execution if it does not find a lock file.
+
+
+### Fork and private repositories
+
+Sometimes it's necessary to use the `repositories` key in your `composer.json` to
+pull in forks, PRs with patches, or private repositories. In this case, your
+GitHub Action may start failing with a `Could not authenticate against github.com`
+error message. To solve this, you need to use an authorized token. Luckily,
+[GHA provides you with one automatically at each run][]; all you need to do is
+set the `repository-projects` permission to `read`:
+
+```yaml
+job:
+  permissions:
+    repository-projects: read
+  steps:
+  # ...
+  - uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+    env:
+      COMPOSER_AUTH: '{"github-oauth": {"github.com": "${{ secrets.GITHUB_TOKEN }}"}}'
+```
+
+In the example above, `COMPOSER_AUTH` is the [default environment variable that Composer supports][]
+to dynamically configure its authentication. If you have other authentication tokens
+in use, and you don't want to conflict with those, you can record the token
+programmatically, as in the example below:
+
+```yaml
+job:
+  permissions:
+    repository-projects: read
+  steps:
+  # ...
+  - run: composer config -- github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}
+    name: Register GitHub token for Composer
+  - uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+```
+
+Note that this approach is only valid for public forks; if you need to access
+private repositories, you must create a secret in the repository that runs the
+action, and use it to store a Personal Access Token with a `read:project` scope
+from a user that is allowed to read those repositories, and use in place of
+`secrets.GITHUB_TOKEN`. In the following example, the PAT is stored in a secret
+called `COMPOSER_PAT`:
+
+```yaml
+env:
+  COMPOSER_AUTH: '{"github-oauth": {"github.com": "${{ secrets.COMPOSER_PAT }}"}}'
+```
+
+For more information on how to do that on your repository, see [Creating a personal access token][]
+and [Creating encrypted secrets for a repository][] on GitHub documentation.
+
+### Matrix Example
+
+GitHub Workflows allow you to set up a [job matrix](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idstrategymatrix),
+which allows you to configure multiple jobs for the same steps by using variable
+substitution in the job definition.
+
+Here's an example of how you might use the `dependency-versions` and
+`composer-options` input parameters as part of a job matrix.
+
+```yaml
+strategy:
+  matrix:
+    php:
+      - "8.3"
+      - "8.4"
+      - "8.5"
+    dependencies:
+      - "lowest"
+      - "highest"
+    include:
+      - php-version: "8.3"
+        composer-options: "--ignore-platform-reqs"
+
+steps:
+  - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd" # v6.0.2
+  - uses: "shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f" # 2.37.0
+    with:
+      php-version: "${{ matrix.php }}"
+  - uses: "ramsey/composer-install@a35c6ebd3d08125aaf8852dff361e686a1a67947" # 3.2.0
+    with:
+      dependency-versions: "${{ matrix.dependencies }}"
+      composer-options: "${{ matrix.composer-options }}"
+```
+
+## Contributing
+
+Contributions are welcome! Before contributing to this project, familiarize
+yourself with [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Copyright and License
+
+The ramsey/composer-install GitHub Action is copyright © [Ben Ramsey](https://benramsey.com)
+and licensed for use under the terms of the MIT License (MIT). Please see
+[LICENSE](LICENSE) for more information.
+
+
+[GHA provides you with one automatically at each run]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication
+[default environment variable that Composer supports]: https://getcomposer.org/doc/articles/authentication-for-private-packages.md#authentication-using-the-composer-auth-environment-variable
+[Creating a personal access token]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token
+[Creating encrypted secrets for a repository]: https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository
+
+## Privacy
+
+This Action contacts Chainguard's licensing server to verify authorization. Connection metadata (IP address, GitHub repository identifier, timestamp, and any metadata encoded in the auth token) is transmitted to Chainguard, Inc. even if authorization is denied in accordance with our [Privacy Notice](https://www.chainguard.dev/legal/privacy-notice)
