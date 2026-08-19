@@ -1,0 +1,10 @@
+{
+    "name": "test/composer-install-subdir-test",
+    "description": "Test fixture in subdirectory for composer-install action",
+    "license": "MIT",
+    "type": "project",
+    "require": {},
+    "config": {
+        "allow-plugins": false
+    }
+}

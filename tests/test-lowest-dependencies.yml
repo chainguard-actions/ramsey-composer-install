@@ -1,4 +1,4 @@
-name: Test custom cache key
+name: Test lowest dependency versions
 on:
   workflow_dispatch:
 jobs:
@@ -19,11 +19,11 @@ jobs:
       - id: action
         uses: .
         with:
-          dependency-versions: "highest"
+          dependency-versions: "lowest"
           composer-options: "--no-scripts"
-          custom-cache-key: "my-custom-cache-key-v1"
+          ignore-cache: "true"
 
-      - name: Assert action ran with custom cache key
+      - name: Assert composer update ran with lowest/prefer-stable
         run: |
-          echo "Composer install with custom-cache-key completed successfully"
+          echo "Composer install with lowest dependencies completed successfully"
           echo "PASS"

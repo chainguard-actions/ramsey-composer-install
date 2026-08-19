@@ -63,7 +63,6 @@ echo "key=${safe_cache_key}" >> "${GITHUB_OUTPUT}"
 
 # Use an environment variable to capture the multiline restore key.
 # See: https://docs.github.com/en/actions/learn-github-actions/workflow-commands-for-github-actions#multiline-strings
-# Sanitize each restore key entry to remove embedded newlines/carriage returns.
 {
     echo "CACHE_RESTORE_KEY<<EOF"
     for rk in "${uniq_restore_key[@]}"; do

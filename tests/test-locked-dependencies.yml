@@ -1,4 +1,4 @@
-name: Test composer-options (--no-dev)
+name: Test locked dependencies (default)
 on:
   workflow_dispatch:
 jobs:
@@ -18,7 +18,6 @@ jobs:
         uses: .
         with:
           dependency-versions: locked
-          composer-options: "--no-dev"
           ignore-cache: "yes"
           working-directory: tests/fixtures/with-lock-file
 
@@ -30,7 +29,7 @@ jobs:
           fi
           echo "PASS: vendor directory exists"
 
-      - name: Assert ehime/hello-world was installed (it is a non-dev dependency)
+      - name: Assert ehime/hello-world was installed
         run: |
           if [ ! -d "$GITHUB_WORKSPACE/tests/fixtures/with-lock-file/vendor/ehime/hello-world" ]; then
             echo "FAIL: ehime/hello-world package not found in vendor"

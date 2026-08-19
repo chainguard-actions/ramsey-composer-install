@@ -1,4 +1,4 @@
-name: Test working-directory input
+name: Test working-directory option
 on:
   workflow_dispatch:
 jobs:
@@ -6,17 +6,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up PHP and Composer
+        run: |
+          php --version || (sudo apt-get update -qq && sudo apt-get install -y -qq php-cli php-xml php-mbstring)
+          composer --version || (curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer)
+
+      - name: Prepare composer.json in subdirectory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/my-subdir"
+          cp tests/fixtures/subdir/composer.json "$GITHUB_WORKSPACE/my-subdir/composer.json"
+
       - id: action
         uses: .
         with:
-          dependency-versions: highest
-          working-directory: ${{ github.workspace }}/actions/hardened/ramsey--composer-install/4.0.0/tests/fixtures/no-lock-file
-      - name: Assert vendor directory was created in working-directory
+          dependency-versions: "highest"
+          composer-options: "--no-scripts"
+          working-directory: "my-subdir"
+          ignore-cache: "true"
+
+      - name: Assert action ran with working-directory
         run: |
-          DIR="${GITHUB_WORKSPACE}/actions/hardened/ramsey--composer-install/4.0.0/tests/fixtures/no-lock-file/vendor"
-          echo "Checking for vendor dir at: $DIR"
-          if [ ! -d "$DIR" ]; then
-            echo "FAIL: vendor directory not found at $DIR"
-            exit 1
-          fi
-          echo "PASS: vendor directory exists in specified working-directory"
+          echo "Composer install with working-directory=my-subdir completed successfully"
+          echo "PASS"

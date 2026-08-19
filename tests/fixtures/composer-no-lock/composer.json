@@ -1,0 +1,10 @@
+{
+    "name": "test/composer-install-test",
+    "description": "Test fixture for composer-install action",
+    "license": "MIT",
+    "type": "project",
+    "require": {},
+    "config": {
+        "allow-plugins": false
+    }
+}

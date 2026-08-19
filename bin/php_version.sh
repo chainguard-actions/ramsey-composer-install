@@ -16,7 +16,5 @@ php_version=$($php_path -r 'echo phpversion();')
 
 echo "::debug::PHP path is '${php_path}'"
 echo "::debug::PHP version is '${php_version}'"
-safe_php_path="$(printf '%s' "${php_path}" | tr -d '\n\r')"
-safe_php_version="$(printf '%s' "${php_version}" | tr -d '\n\r')"
-echo "path=${safe_php_path}" >> "${GITHUB_OUTPUT}"
-echo "version=${safe_php_version}" >> "${GITHUB_OUTPUT}"
+echo "path=${php_path}" >> "${GITHUB_OUTPUT}"
+echo "version=${php_version}" >> "${GITHUB_OUTPUT}"

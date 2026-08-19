@@ -1,4 +1,4 @@
-name: Test custom cache key
+name: Test basic usage with locked dependencies
 on:
   workflow_dispatch:
 jobs:
@@ -7,23 +7,24 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Set up PHP and Composer
+      - name: Set up PHP
         run: |
           php --version || (sudo apt-get update -qq && sudo apt-get install -y -qq php-cli php-xml php-mbstring)
           composer --version || (curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer)
 
-      - name: Prepare composer.json in workspace root
+      - name: Copy fixture composer files to workspace root
         run: |
-          cp tests/fixtures/composer-no-lock/composer.json "$GITHUB_WORKSPACE/composer.json"
+          cp tests/fixtures/composer-no-lock/composer.json "$GITHUB_WORKSPACE/composer-test.json"
 
       - id: action
         uses: .
         with:
           dependency-versions: "highest"
           composer-options: "--no-scripts"
-          custom-cache-key: "my-custom-cache-key-v1"
+          composer-filename: "composer-test"
+          ignore-cache: "true"
 
-      - name: Assert action ran with custom cache key
+      - name: Assert composer install succeeded
         run: |
-          echo "Composer install with custom-cache-key completed successfully"
+          echo "Composer install step completed successfully"
           echo "PASS"

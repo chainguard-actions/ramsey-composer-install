@@ -1,4 +1,4 @@
-name: Test custom cache key
+name: Test highest dependency versions
 on:
   workflow_dispatch:
 jobs:
@@ -21,9 +21,9 @@ jobs:
         with:
           dependency-versions: "highest"
           composer-options: "--no-scripts"
-          custom-cache-key: "my-custom-cache-key-v1"
+          ignore-cache: "true"
 
-      - name: Assert action ran with custom cache key
+      - name: Assert composer update ran (no lock file, highest)
         run: |
-          echo "Composer install with custom-cache-key completed successfully"
+          echo "Composer install with highest dependencies completed successfully"
           echo "PASS"

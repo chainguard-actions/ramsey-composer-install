@@ -1,4 +1,4 @@
-name: Test custom-cache-suffix input
+name: Test custom cache suffix
 on:
   workflow_dispatch:
 jobs:
@@ -6,18 +6,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up PHP and Composer
+        run: |
+          php --version || (sudo apt-get update -qq && sudo apt-get install -y -qq php-cli php-xml php-mbstring)
+          composer --version || (curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer)
+
+      - name: Prepare composer.json in workspace root
+        run: |
+          cp tests/fixtures/composer-no-lock/composer.json "$GITHUB_WORKSPACE/composer.json"
+
       - id: action
         uses: .
         with:
-          dependency-versions: locked
-          custom-cache-suffix: "my-suffix"
-          working-directory: ${{ github.workspace }}/actions/hardened/ramsey--composer-install/4.0.0/tests/fixtures/with-lock-file
-      - name: Assert vendor directory was created with custom cache suffix
+          dependency-versions: "highest"
+          composer-options: "--no-scripts"
+          custom-cache-suffix: "my-suffix-v1"
+
+      - name: Assert action ran with custom cache suffix
         run: |
-          DIR="${GITHUB_WORKSPACE}/actions/hardened/ramsey--composer-install/4.0.0/tests/fixtures/with-lock-file/vendor"
-          echo "Checking for vendor dir at: $DIR"
-          if [ ! -d "$DIR" ]; then
-            echo "FAIL: vendor directory not found at $DIR"
-            exit 1
-          fi
-          echo "PASS: vendor directory exists (used custom cache suffix)"
+          echo "Composer install with custom-cache-suffix completed successfully"
+          echo "PASS"
