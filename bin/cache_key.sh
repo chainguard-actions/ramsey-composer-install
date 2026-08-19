@@ -16,7 +16,7 @@ function make_key {
             non_empties+=("${element}")
         fi
     done
-    tr "[:blank:]" "-" <<<"${non_empties[*]}"
+    tr "[:blank:]" "-" <<< "${non_empties[*]}"
 }
 
 runner_os="${1:-}"
@@ -51,22 +51,25 @@ fi
 
 # Remove duplicates.
 # shellcheck disable=SC2207
-uniq_restore_key=($(tr ' ' '\n' <<<"${restore_key[@]}" | awk '!u[$0]++' | tr '\n' ' '))
+uniq_restore_key=($(tr ' ' '\n' <<< "${restore_key[@]}" | awk '!u[$0]++' | tr '\n' ' '))
 
 cache_key="$(make_key "${key[@]}")"
 
 echo "::debug::Cache primary key is '${cache_key}'"
 echo "::debug::Cache restore keys are '$(join_by ", " "${uniq_restore_key[@]}")'"
 
+# Sanitize cache_key: strip newlines to prevent GITHUB_OUTPUT injection
 safe_cache_key="$(printf '%s' "${cache_key}" | tr -d '\n\r')"
 echo "key=${safe_cache_key}" >> "${GITHUB_OUTPUT}"
 
 # Use an environment variable to capture the multiline restore key.
 # See: https://docs.github.com/en/actions/learn-github-actions/workflow-commands-for-github-actions#multiline-strings
+# Sanitize each restore key entry by stripping newlines before writing to GITHUB_ENV.
 {
     echo "CACHE_RESTORE_KEY<<EOF"
-    for restore_key_entry in "${uniq_restore_key[@]}"; do
-        printf '%s\n' "$(printf '%s' "${restore_key_entry}" | tr -d '\n\r')"
+    for rk in "${uniq_restore_key[@]}"; do
+        printf '%s' "${rk}" | tr -d '\n\r'
+        printf '\n'
     done
     echo "EOF"
 } >> "${GITHUB_ENV}"

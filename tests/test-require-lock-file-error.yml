@@ -1,0 +1,43 @@
+name: Test require-lock-file error when no lock file present
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install PHP and Composer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq php-cli php-mbstring
+          php -v
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          composer --version
+
+      - name: Set up fixture without lock file
+        run: |
+          mkdir -p /tmp/test-require-lock
+          cp tests/fixtures/basic/composer.json /tmp/test-require-lock/composer.json
+          # Ensure no lock file exists
+          rm -f /tmp/test-require-lock/composer.lock
+
+      - id: action
+        uses: .
+        with:
+          dependency-versions: locked
+          require-lock-file: "true"
+          working-directory: /tmp/test-require-lock
+        continue-on-error: true
+
+      - name: Assert action failed due to missing lock file
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail when require-lock-file=true and no lock file present, but outcome was '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when lock file was required but not found"

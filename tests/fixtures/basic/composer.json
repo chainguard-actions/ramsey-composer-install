@@ -1,0 +1,13 @@
+{
+    "name": "test/basic",
+    "description": "Test fixture for ramsey/composer-install",
+    "license": "MIT",
+    "type": "project",
+    "require": {},
+    "require-dev": {
+        "ehime/hello-world": "^1.0.0"
+    },
+    "config": {
+        "allow-plugins": false
+    }
+}

@@ -1,25 +1,54 @@
-name: Test with composer-options input
+name: Test composer-options input
 on:
   workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Install PHP
+
+      - name: Install PHP and Composer
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y php-cli php-mbstring php-xml composer
+          sudo apt-get install -y -qq php-cli php-mbstring
+          php -v
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          composer --version
+
+      - name: Set up fixture
+        run: |
+          mkdir -p /tmp/test-options
+          cp tests/fixtures/basic/composer.json /tmp/test-options/composer.json
+
       - id: action
         uses: .
         with:
-          dependency-versions: locked
-          composer-options: "--ignore-platform-reqs"
-          working-directory: ${{ github.workspace }}
+          dependency-versions: highest
+          composer-options: "--no-dev"
+          working-directory: /tmp/test-options
+
       - name: Assert vendor directory exists
         run: |
-          if [ ! -d "$GITHUB_WORKSPACE/vendor" ]; then
-            echo "FAIL: vendor directory not found"
+          if [ ! -d "/tmp/test-options/vendor" ]; then
+            echo "FAIL: vendor directory not found at /tmp/test-options/vendor"
             exit 1
           fi
-          echo "PASS: vendor directory exists with composer-options"
+          echo "PASS: vendor directory exists"
+
+      - name: Assert autoload file exists
+        run: |
+          if [ ! -f "/tmp/test-options/vendor/autoload.php" ]; then
+            echo "FAIL: autoload.php not found"
+            exit 1
+          fi
+          echo "PASS: autoload.php exists"
+
+      - name: Assert dev dependencies not installed (--no-dev)
+        run: |
+          # With --no-dev, the ehime/hello-world dev dependency should not be installed
+          if [ -d "/tmp/test-options/vendor/ehime" ]; then
+            echo "FAIL: dev dependency ehime/hello-world was installed despite --no-dev"
+            exit 1
+          fi
+          echo "PASS: dev dependencies not installed as expected"

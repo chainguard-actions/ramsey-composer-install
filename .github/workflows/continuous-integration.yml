@@ -1,0 +1,260 @@
+# GitHub Actions Documentation: https://docs.github.com/en/actions
+
+name: "build"
+
+on: ["pull_request", "push", "workflow_dispatch"]
+
+permissions:
+  contents: read
+
+# Cancels all previous workflow runs for the same branch that have not yet completed.
+concurrency:
+  # The concurrency group contains the workflow name and the branch name.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  composer:
+    name: "Check Composer"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd" # v6.0.2
+      - name: "Set up PHP"
+        uses: "shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f" # 2.37.0
+        with:
+          php-version: "latest"
+          tools: composer-normalize
+          coverage: none
+      - name: "Run Composer normalize"
+        run: "composer-normalize --dry-run"
+
+  test:
+    name: "Bats tests"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd" # v6.0.2
+        with:
+          submodules: "recursive"
+      - name: "Set up PHP"
+        uses: "shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f" # 2.37.0
+        with:
+          php-version: "latest"
+          coverage: "none"
+        env:
+          fail-fast: true
+      - name: "Run expect tests"
+        run: "composer test"
+
+  code-coverage:
+    needs: test
+    if: github.repository == 'ramsey/composer-install'
+    name: "Code coverage"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd" # v6.0.2
+        with:
+          submodules: "recursive"
+      - name: "Set up Ruby"
+        uses: "ruby/setup-ruby@dffb23f65a78bba8db45d387d5ea1bbd6be3ef18" # v1.293.0
+        with:
+          ruby-version: "3.2"
+      - name: "Install Ruby dependencies"
+        run: |
+          gem install bashcov
+          gem install simplecov-cobertura
+      - name: "Set up PHP"
+        uses: "shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f" # 2.37.0
+        with:
+          php-version: "latest"
+          coverage: "none"
+      - name: "Run tests"
+        run: "bashcov --root ./bin -- ./tests/test_helper/bats/bin/bats tests/"
+      - name: "Publish coverage report to Codecov"
+        uses: "codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de" # v5.5.2
+        with:
+          files: "./bin/coverage/coverage.xml"
+
+  static-analysis:
+    name: "Static analysis"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd" # v6.0.2
+      - name: "Run shellcheck"
+        run: "shellcheck bin/*.sh tests/*.bats"
+
+  run:
+    needs: test
+    name: "Run action"
+    runs-on: "${{ matrix.operating-system }}"
+    strategy:
+      matrix:
+        operating-system:
+          - "ubuntu-latest"
+          - "windows-latest"
+        dependency-versions:
+          - "lowest"
+          - "highest"
+          - "locked"
+        working-directory:
+          - "tests/fixtures/with-lock-file"
+          - "tests/fixtures/no-lock-file"
+          - "tests/fixtures/out-of-sync-lock"
+          - ""
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd" # v6.0.2
+      - name: "Set up PHP"
+        uses: "shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f" # 2.37.0
+        with:
+          php-version: "latest"
+          coverage: "none"
+        env:
+          fail-fast: true
+
+      - name: "Test: plain install"
+        uses: ./
+        with:
+          working-directory: "${{ matrix.working-directory }}"
+          dependency-versions: "${{ matrix.dependency-versions }}"
+
+      - name: Clean up between tests
+        run: |
+          git clean -ffdx && git reset --hard HEAD
+          composer clear-cache
+
+      - name: "Test: ignore platform reqs"
+        uses: ./
+        with:
+          working-directory: "${{ matrix.working-directory }}"
+          dependency-versions: "${{ matrix.dependency-versions }}"
+          composer-options: '--ignore-platform-reqs'
+
+      - name: Clean up between tests
+        run: |
+          git clean -ffdx && git reset --hard HEAD
+          composer clear-cache
+
+      - name: "Test: ignore platform reqs, ignore cache"
+        uses: ./
+        with:
+          working-directory: "${{ matrix.working-directory }}"
+          dependency-versions: "${{ matrix.dependency-versions }}"
+          composer-options: '--ignore-platform-reqs'
+          ignore-cache: 'yes'
+
+      - name: Clean up between tests
+        run: |
+          git clean -ffdx && git reset --hard HEAD
+          composer clear-cache
+
+      - name: "Test: ignore platform reqs, custom cache key"
+        uses: ./
+        with:
+          working-directory: "${{ matrix.working-directory }}"
+          dependency-versions: "${{ matrix.dependency-versions }}"
+          composer-options: '--ignore-platform-reqs'
+          custom-cache-key: 'my-super-custom-cache-key'
+
+      - name: Clean up between tests
+        run: |
+          git clean -ffdx && git reset --hard HEAD
+          composer clear-cache
+
+      - name: "Test: ignore platform reqs, ignore cache, custom cache key"
+        uses: ./
+        with:
+          working-directory: "${{ matrix.working-directory }}"
+          dependency-versions: "${{ matrix.dependency-versions }}"
+          composer-options: '--ignore-platform-reqs'
+          ignore-cache: 'yes'
+          custom-cache-key: 'my-super-custom-cache-key'
+
+      - name: Clean up between tests
+        run: |
+          git clean -ffdx && git reset --hard HEAD
+          composer clear-cache
+
+      - name: "Test: ignore cache"
+        uses: ./
+        with:
+          working-directory: "${{ matrix.working-directory }}"
+          dependency-versions: "${{ matrix.dependency-versions }}"
+          ignore-cache: 'yes'
+
+      - name: Clean up between tests
+        run: |
+          git clean -ffdx && git reset --hard HEAD
+          composer clear-cache
+
+      - name: "Test: ignore cache, custom cache key"
+        uses: ./
+        with:
+          working-directory: "${{ matrix.working-directory }}"
+          dependency-versions: "${{ matrix.dependency-versions }}"
+          ignore-cache: 'yes'
+          custom-cache-key: 'my-super-custom-cache-key'
+
+      - name: Clean up between tests
+        run: |
+          git clean -ffdx && git reset --hard HEAD
+          composer clear-cache
+
+      - name: "Test: custom cache key"
+        uses: ./
+        with:
+          working-directory: "${{ matrix.working-directory }}"
+          dependency-versions: "${{ matrix.dependency-versions }}"
+          custom-cache-key: 'my-super-custom-cache-key'
+
+      - name: Clean up between tests
+        run: |
+          git clean -ffdx && git reset --hard HEAD
+          composer clear-cache
+
+      - name: "Test: custom cache suffix"
+        uses: ./
+        with:
+          working-directory: "${{ matrix.working-directory }}"
+          dependency-versions: "${{ matrix.dependency-versions }}"
+          custom-cache-suffix: $(/bin/date -u --date='last Mon' "+%F")
+
+  run-no-cleanup:
+    needs: test
+    name: "Run unclean"
+    runs-on: "${{ matrix.operating-system }}"
+    strategy:
+      matrix:
+        operating-system:
+          - "ubuntu-latest"
+          - "windows-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd" # v6.0.2
+      - name: "Set up PHP"
+        uses: "shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f" # 2.37.0
+        with:
+          php-version: "latest"
+          coverage: "none"
+        env:
+          fail-fast: true
+
+      - name: "Test: plain install"
+        uses: ./
+        with:
+          working-directory: 'tests/fixtures/with-lock-file'
+
+      - name: "Test: switch to lowest dependencies"
+        uses: ./
+        with:
+          working-directory: 'tests/fixtures/with-lock-file'
+          dependency-versions: 'lowest'
+
+      - name: "Test: switch to highest dependencies"
+        uses: ./
+        with:
+          working-directory: 'tests/fixtures/with-lock-file'
+          dependency-versions: 'highest'
