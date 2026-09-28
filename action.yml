@@ -69,21 +69,21 @@ runs:
       id: "should-cache"
       shell: "bash"
       env:
-        IGNORE_CACHE: ${{ inputs.ignore-cache }}
-      run: '${GITHUB_ACTION_PATH}/bin/should_cache.sh "$IGNORE_CACHE"'
+        INPUT_IGNORE_CACHE: ${{ inputs.ignore-cache }}
+      run: '${GITHUB_ACTION_PATH}/bin/should_cache.sh "$INPUT_IGNORE_CACHE"'
     - name: "Determine Composer paths"
       id: "composer"
       shell: "bash"
       env:
-        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
         PHP_PATH: ${{ steps.php.outputs.path }}
-        COMPOSER_FILENAME: ${{ inputs.composer-filename }}
+        INPUT_COMPOSER_FILENAME: ${{ inputs.composer-filename }}
       run: |
         ${GITHUB_ACTION_PATH}/bin/composer_paths.sh \
           "" \
-          "$WORKING_DIRECTORY" \
+          "$INPUT_WORKING_DIRECTORY" \
           "$PHP_PATH" \
-          "$COMPOSER_FILENAME"
+          "$INPUT_COMPOSER_FILENAME"
     - name: "Determine cache key"
       id: "cache-key"
       if: steps.should-cache.outputs.do-cache == 1
@@ -91,25 +91,25 @@ runs:
       env:
         RUNNER_OS_VAL: ${{ runner.os }}
         PHP_VERSION: ${{ steps.php.outputs.version }}
-        DEPENDENCY_VERSIONS: ${{ inputs.dependency-versions }}
-        COMPOSER_OPTIONS: ${{ inputs.composer-options }}
+        INPUT_DEPENDENCY_VERSIONS: ${{ inputs.dependency-versions }}
+        INPUT_COMPOSER_OPTIONS: ${{ inputs.composer-options }}
         FILES_HASH: ${{ hashFiles(format('**/{0}.json', inputs.composer-filename), format('**/{0}.lock', inputs.composer-filename)) }}
-        CUSTOM_CACHE_KEY: ${{ inputs.custom-cache-key }}
-        CUSTOM_CACHE_SUFFIX: ${{ inputs.custom-cache-suffix }}
-        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_CUSTOM_CACHE_KEY: ${{ inputs.custom-cache-key }}
+        INPUT_CUSTOM_CACHE_SUFFIX: ${{ inputs.custom-cache-suffix }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
       run: |
         ${GITHUB_ACTION_PATH}/bin/cache_key.sh \
           "$RUNNER_OS_VAL" \
           "$PHP_VERSION" \
-          "$DEPENDENCY_VERSIONS" \
-          "$COMPOSER_OPTIONS" \
+          "$INPUT_DEPENDENCY_VERSIONS" \
+          "$INPUT_COMPOSER_OPTIONS" \
           "$FILES_HASH" \
-          "$CUSTOM_CACHE_KEY" \
-          "$CUSTOM_CACHE_SUFFIX" \
-          "$WORKING_DIRECTORY"
+          "$INPUT_CUSTOM_CACHE_KEY" \
+          "$INPUT_CUSTOM_CACHE_SUFFIX" \
+          "$INPUT_WORKING_DIRECTORY"
     - name: "Cache Composer dependencies"
       if: steps.should-cache.outputs.do-cache == 1
-      uses: "actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306" # v5.0.3
+      uses: "chainguard-actions/actions-cache@bf3571dc23f0f3563eb28d6e1ac2a52ee32fe125" # v5.0.3
       with:
         path: "${{ steps.composer.outputs.cache-dir }}"
         key: "${{ steps.cache-key.outputs.key }}"
@@ -118,21 +118,21 @@ runs:
     - name: "Install Composer dependencies"
       shell: "bash"
       env:
-        DEPENDENCY_VERSIONS: ${{ inputs.dependency-versions }}
-        COMPOSER_OPTIONS: ${{ inputs.composer-options }}
-        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_DEPENDENCY_VERSIONS: ${{ inputs.dependency-versions }}
+        INPUT_COMPOSER_OPTIONS: ${{ inputs.composer-options }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
         PHP_PATH: ${{ steps.php.outputs.path }}
         COMPOSER_COMMAND: ${{ steps.composer.outputs.composer_command }}
         COMPOSER_LOCK: ${{ steps.composer.outputs.lock }}
-        REQUIRE_LOCK_FILE: ${{ inputs.require-lock-file }}
-        COMPOSER_FILENAME: ${{ inputs.composer-filename }}
+        INPUT_REQUIRE_LOCK_FILE: ${{ inputs.require-lock-file }}
+        INPUT_COMPOSER_FILENAME: ${{ inputs.composer-filename }}
       run: |
         ${GITHUB_ACTION_PATH}/bin/composer_install.sh \
-          "$DEPENDENCY_VERSIONS" \
-          "$COMPOSER_OPTIONS" \
-          "$WORKING_DIRECTORY" \
+          "$INPUT_DEPENDENCY_VERSIONS" \
+          "$INPUT_COMPOSER_OPTIONS" \
+          "$INPUT_WORKING_DIRECTORY" \
           "$PHP_PATH" \
           "$COMPOSER_COMMAND" \
           "$COMPOSER_LOCK" \
-          "$REQUIRE_LOCK_FILE" \
-          "$COMPOSER_FILENAME" \
+          "$INPUT_REQUIRE_LOCK_FILE" \
+          "$INPUT_COMPOSER_FILENAME" \

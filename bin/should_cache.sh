@@ -13,4 +13,5 @@ if [ $should_cache -eq 0 ]; then
 fi
 
 echo "::debug::We ${will_cache} the dependencies because ignore-cache is set to '${ignore_cache}'"
-echo "do-cache=${should_cache}" >> "${GITHUB_OUTPUT}"
+safe_should_cache="$(printf '%s' "${should_cache}" | tr -d '\n\r')"
+echo "do-cache=${safe_should_cache}" >> "${GITHUB_OUTPUT}"
