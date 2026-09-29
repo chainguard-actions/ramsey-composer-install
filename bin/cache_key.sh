@@ -65,8 +65,9 @@ echo "key=${safe_cache_key}" >> "${GITHUB_OUTPUT}"
 # See: https://docs.github.com/en/actions/learn-github-actions/workflow-commands-for-github-actions#multiline-strings
 {
     echo "CACHE_RESTORE_KEY<<EOF"
-    for restore_key_entry in "${uniq_restore_key[@]}"; do
-        printf '%s\n' "$(printf '%s' "${restore_key_entry}" | tr -d '\n\r')"
+    for restore_key_item in "${uniq_restore_key[@]}"; do
+        safe_restore_key_item="$(printf '%s' "${restore_key_item}" | tr -d '\n\r')"
+        printf '%s\n' "${safe_restore_key_item}"
     done
     echo "EOF"
 } >> "${GITHUB_ENV}"

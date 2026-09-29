@@ -10,31 +10,47 @@
 
 **Harden Agent Version:** `2`
 
-Action **ramsey--composer-install/4.0.0** was hardened automatically. 15 finding(s) were identified and resolved across 1 iteration(s).
+Action **ramsey--composer-install/4.0.0** was hardened automatically. 15 finding(s) were identified and resolved across 2 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Sub-rule (a): Multiple run: blocks in action.yml directly interpolate ${{ ... }} expressions into shell command strings. This includes user-controlled inputs (inputs.ignore-cache, inputs.working-directory, inputs.composer-filename, inputs.dependency-versions, inputs.composer-options, inputs.custom-cache-key, inputs.custom-cache-suffix, inputs.require-lock-file) and step outputs (steps.php.outputs.path, steps.php.outputs.version, steps.composer.outputs.*). An attacker who controls these values can break out of the quoted argument and inject arbitrary shell commands. Affected steps: 'Determine whether we should ignore caching' (run: '..."${{ inputs.ignore-cache }}"'), 'Determine Composer paths' (run: | ... "${{ inputs.working-directory }}" ...), 'Determine cache key' (run: | ... "${{ runner.os }}" ... "${{ inputs.dependency-versions }}" ...), and 'Install Composer dependencies' (run: | ... "${{ inputs.dependency-versions }}" ...). All ${{ }} expressions must be moved to env: variables and the shell expansions must be double-quoted.
+Sub-rule (a): Multiple ${{ }} expressions are directly interpolated into run: shell command strings in action.yml. GitHub Actions performs YAML template substitution before the shell parses the string, so any attacker-controlled value (inputs.*, steps.*.outputs.*, runner.*) can inject arbitrary shell commands.
+
+Affected steps and offending expressions:
+
+1. "Determine whether we should ignore caching" (line 57): `${{ inputs.ignore-cache }}` interpolated directly into the shell command string.
+
+2. "Determine Composer paths" (lines 63-66): `${{ inputs.working-directory }}`, `${{ steps.php.outputs.path }}`, `${{ inputs.composer-filename }}` interpolated directly into the shell command.
+
+3. "Determine cache key" (lines 72-79): `${{ runner.os }}`, `${{ steps.php.outputs.version }}`, `${{ inputs.dependency-versions }}`, `${{ inputs.composer-options }}`, `${{ inputs.custom-cache-key }}`, `${{ inputs.custom-cache-suffix }}`, `${{ inputs.working-directory }}` all interpolated directly into the shell command.
+
+4. "Install Composer dependencies" (lines 88-95): `${{ inputs.dependency-versions }}`, `${{ inputs.composer-options }}`, `${{ inputs.working-directory }}`, `${{ steps.php.outputs.path }}`, `${{ steps.composer.outputs.composer_command }}`, `${{ steps.composer.outputs.lock }}`, `${{ inputs.require-lock-file }}`, `${{ inputs.composer-filename }}` all interpolated directly into the shell command.
+
+Fix: Move all ${{ }} values into env: variables and reference them as quoted shell variables (e.g., "$INPUT_IGNORE_CACHE") inside the run: block.
 
 Locations:
 
-- `action.yml:59`
-- `action.yml:63`
+- `action.yml:57`
+- `action.yml:62`
 - `action.yml:71`
-- `action.yml:85`
+- `action.yml:87`
 
 ### github-env-injection (severity: high)
 
-Multiple bin/ scripts write user-controlled values to $GITHUB_OUTPUT and $GITHUB_ENV without the required sanitization step (printf '%s' ... | tr -d '\n\r'). (1) bin/cache_key.sh: writes 'key=${cache_key}' to $GITHUB_OUTPUT and a multiline CACHE_RESTORE_KEY to $GITHUB_ENV — both derived from user-controlled inputs (composer-options, custom-cache-key, custom-cache-suffix, working-directory) passed as positional arguments from action.yml's ${{ inputs.* }} interpolations. (2) bin/should_cache.sh: writes 'do-cache=${should_cache}' to $GITHUB_OUTPUT — derived from the user-controlled ignore-cache input. (3) bin/composer_paths.sh: writes composer_command, cache-dir, json, and lock to $GITHUB_OUTPUT — values derived from user-controlled working-directory and composer-filename inputs. A newline injected into any of these values can define arbitrary environment variables or override existing ones in subsequent steps.
+bin/cache_key.sh writes values derived from untrusted inputs to $GITHUB_OUTPUT and $GITHUB_ENV without the required sanitization step (printf '%s' "$VAR" | tr -d '\n\r').
+
+1. Line 44 of cache_key.sh: `echo "key=${cache_key}" >> "${GITHUB_OUTPUT}"` — cache_key is built from positional arguments that include inputs.custom-cache-key, inputs.composer-options, inputs.custom-cache-suffix, and inputs.working-directory (all passed as ${{ inputs.* }} from action.yml line 71-79). A newline embedded in any of these inputs can inject additional key=value pairs into GITHUB_OUTPUT.
+
+2. Lines 47-51 of cache_key.sh: A heredoc block writes CACHE_RESTORE_KEY to $GITHUB_ENV without sanitization. The restore key is derived from the same untrusted inputs. A newline in any input value can break out of the heredoc boundary or inject arbitrary environment variables into GITHUB_ENV.
+
+Fix: Apply `safe=$(printf '%s' "$var" | tr -d '\n\r')` to each input-derived value immediately before writing it to $GITHUB_OUTPUT or $GITHUB_ENV.
 
 Locations:
 
-- `bin/cache_key.sh:52`
-- `bin/cache_key.sh:56`
-- `bin/should_cache.sh:16`
-- `bin/composer_paths.sh:68`
+- `bin/cache_key.sh:44`
+- `bin/cache_key.sh:47`
 
 ### static-inline-injection (severity: high)
 
@@ -148,13 +164,13 @@ Locations:
 
 **Notes:**
 
-Fixed all findings across action.yml and three bin/ scripts:
+Fixed all ${{ }} expression interpolations in action.yml run: blocks by moving them to env: maps and referencing as shell variables. Fixed bin/cache_key.sh to sanitize values with `printf '%s' | tr -d '\n\r'` before writing to $GITHUB_OUTPUT and $GITHUB_ENV to prevent newline injection attacks.
 
-1. action.yml - Moved all ${{ }} expressions out of run: blocks into env: blocks for four steps: 'Determine whether we should ignore caching' (INPUT_IGNORE_CACHE), 'Determine Composer paths' (INPUT_WORKING_DIRECTORY, PHP_PATH, INPUT_COMPOSER_FILENAME), 'Determine cache key' (RUNNER_OS_VAL, PHP_VERSION, INPUT_DEPENDENCY_VERSIONS, INPUT_COMPOSER_OPTIONS, FILES_HASH, INPUT_CUSTOM_CACHE_KEY, INPUT_CUSTOM_CACHE_SUFFIX, INPUT_WORKING_DIRECTORY), and 'Install Composer dependencies' (INPUT_DEPENDENCY_VERSIONS, INPUT_COMPOSER_OPTIONS, INPUT_WORKING_DIRECTORY, PHP_PATH, COMPOSER_COMMAND, COMPOSER_LOCK, INPUT_REQUIRE_LOCK_FILE, INPUT_COMPOSER_FILENAME). Shell scripts now reference plain env vars.
+### Iteration 2
 
-2. bin/should_cache.sh - Sanitized 'should_cache' value with printf | tr -d before writing to GITHUB_OUTPUT.
+**Fixes applied:** github-env-injection
 
-3. bin/composer_paths.sh - Sanitized composer_path, cache_dir, composer_json, and composer_lock values with printf | tr -d before writing to GITHUB_OUTPUT.
+**Notes:**
 
-4. bin/cache_key.sh - Sanitized cache_key with printf | tr -d before writing to GITHUB_OUTPUT, and sanitized each restore key entry before writing the multiline CACHE_RESTORE_KEY to GITHUB_ENV.
+Fixed bin/composer_paths.sh: replaced the direct heredoc writes to GITHUB_OUTPUT with sanitized versions. Each value (composer_path, cache_dir, composer_json, composer_lock) is now passed through `printf '%s' ... | tr -d '\n\r'` before being written to GITHUB_OUTPUT, preventing newline injection attacks from attacker-controlled inputs like `working-directory` and `composer-filename`.
 
