@@ -76,13 +76,13 @@ runs:
       shell: "bash"
       env:
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
-        STEPS_PHP_PATH: ${{ steps.php.outputs.path }}
+        PHP_PATH: ${{ steps.php.outputs.path }}
         INPUT_COMPOSER_FILENAME: ${{ inputs.composer-filename }}
       run: |
         ${GITHUB_ACTION_PATH}/bin/composer_paths.sh \
           "" \
           "$INPUT_WORKING_DIRECTORY" \
-          "$STEPS_PHP_PATH" \
+          "$PHP_PATH" \
           "$INPUT_COMPOSER_FILENAME"
     - name: "Determine cache key"
       id: "cache-key"
@@ -90,20 +90,20 @@ runs:
       shell: "bash"
       env:
         RUNNER_OS_INPUT: ${{ runner.os }}
-        STEPS_PHP_VERSION: ${{ steps.php.outputs.version }}
+        PHP_VERSION: ${{ steps.php.outputs.version }}
         INPUT_DEPENDENCY_VERSIONS: ${{ inputs.dependency-versions }}
         INPUT_COMPOSER_OPTIONS: ${{ inputs.composer-options }}
-        INPUT_FILES_HASH: ${{ hashFiles(format('**/{0}.json', inputs.composer-filename), format('**/{0}.lock', inputs.composer-filename)) }}
+        FILES_HASH: ${{ hashFiles(format('**/{0}.json', inputs.composer-filename), format('**/{0}.lock', inputs.composer-filename)) }}
         INPUT_CUSTOM_CACHE_KEY: ${{ inputs.custom-cache-key }}
         INPUT_CUSTOM_CACHE_SUFFIX: ${{ inputs.custom-cache-suffix }}
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
       run: |
         ${GITHUB_ACTION_PATH}/bin/cache_key.sh \
           "$RUNNER_OS_INPUT" \
-          "$STEPS_PHP_VERSION" \
+          "$PHP_VERSION" \
           "$INPUT_DEPENDENCY_VERSIONS" \
           "$INPUT_COMPOSER_OPTIONS" \
-          "$INPUT_FILES_HASH" \
+          "$FILES_HASH" \
           "$INPUT_CUSTOM_CACHE_KEY" \
           "$INPUT_CUSTOM_CACHE_SUFFIX" \
           "$INPUT_WORKING_DIRECTORY"
@@ -121,9 +121,9 @@ runs:
         INPUT_DEPENDENCY_VERSIONS: ${{ inputs.dependency-versions }}
         INPUT_COMPOSER_OPTIONS: ${{ inputs.composer-options }}
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
-        STEPS_PHP_PATH: ${{ steps.php.outputs.path }}
-        STEPS_COMPOSER_COMMAND: ${{ steps.composer.outputs.composer_command }}
-        STEPS_COMPOSER_LOCK: ${{ steps.composer.outputs.lock }}
+        PHP_PATH: ${{ steps.php.outputs.path }}
+        COMPOSER_COMMAND: ${{ steps.composer.outputs.composer_command }}
+        COMPOSER_LOCK: ${{ steps.composer.outputs.lock }}
         INPUT_REQUIRE_LOCK_FILE: ${{ inputs.require-lock-file }}
         INPUT_COMPOSER_FILENAME: ${{ inputs.composer-filename }}
       run: |
@@ -131,8 +131,8 @@ runs:
           "$INPUT_DEPENDENCY_VERSIONS" \
           "$INPUT_COMPOSER_OPTIONS" \
           "$INPUT_WORKING_DIRECTORY" \
-          "$STEPS_PHP_PATH" \
-          "$STEPS_COMPOSER_COMMAND" \
-          "$STEPS_COMPOSER_LOCK" \
+          "$PHP_PATH" \
+          "$COMPOSER_COMMAND" \
+          "$COMPOSER_LOCK" \
           "$INPUT_REQUIRE_LOCK_FILE" \
           "$INPUT_COMPOSER_FILENAME" \
