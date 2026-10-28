@@ -6,10 +6,10 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 ## Versions
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| 3.2.1 | [`3.2.1`](https://github.com/chainguard-actions/ramsey-composer-install/tree/3.2.1) | [`a8d0d95`](https://github.com/ramsey/composer-install/commit/a8d0d959dab41457692a5e2041bd9b757a119e3f) |
-| 4.0.0 | [`4.0.0`](https://github.com/chainguard-actions/ramsey-composer-install/tree/4.0.0) | [`65e4f84`](https://github.com/ramsey/composer-install/commit/65e4f84970763564f46a70b8a54b90d033b3bdda) |
+| Version | Tag | Upstream commit | Hardening report |
+|---------|-----|-----------------|------------------|
+| 3.2.1 | [`3.2.1`](https://github.com/chainguard-actions/ramsey-composer-install/tree/3.2.1) | [`a8d0d95`](https://github.com/ramsey/composer-install/commit/a8d0d959dab41457692a5e2041bd9b757a119e3f) | [`HARDENING.md`](https://github.com/chainguard-actions/ramsey-composer-install/blob/3.2.1/HARDENING.md) |
+| 4.0.0 | [`4.0.0`](https://github.com/chainguard-actions/ramsey-composer-install/tree/4.0.0) | [`65e4f84`](https://github.com/ramsey/composer-install/commit/65e4f84970763564f46a70b8a54b90d033b3bdda) | [`HARDENING.md`](https://github.com/chainguard-actions/ramsey-composer-install/blob/4.0.0/HARDENING.md) |
 
 ## Privacy
 
