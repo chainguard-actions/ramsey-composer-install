@@ -1,10 +1,13 @@
 name: "Install PHP Dependencies with Composer"
 author: "Ben Ramsey"
 description: >-
-  Installs and caches PHP dependencies with Composer, accepting arguments to configure how and what to install.
+  Installs and caches PHP dependencies with Composer, accepting arguments to
+  configure how and what to install.
+
 branding:
   icon: download
   color: purple
+
 inputs:
   dependency-versions:
     description: >-
@@ -38,9 +41,12 @@ inputs:
     default: "false"
   composer-filename:
     description: >-
-      The Composer filename to use, without the extension (e.g. `composer`, `composer-gh-actions`, `composer-staging`). Please note: this is not a path. If you need to specify a different path, use `working-directory`.
+      The Composer filename to use, without the extension (e.g. `composer`,
+      `composer-gh-actions`, `composer-staging`). Please note: this is not a
+      path. If you need to specify a different path, use `working-directory`.
     required: false
     default: "composer"
+
 runs:
   using: "composite"
   steps:
@@ -65,12 +71,14 @@ runs:
       id: "php"
       shell: "bash"
       run: "${GITHUB_ACTION_PATH}/bin/php_version.sh"
+
     - name: "Determine whether we should ignore caching"
       id: "should-cache"
       shell: "bash"
       env:
         INPUT_IGNORE_CACHE: ${{ inputs.ignore-cache }}
-      run: '${GITHUB_ACTION_PATH}/bin/should_cache.sh "$INPUT_IGNORE_CACHE"'
+      run: '"${GITHUB_ACTION_PATH}/bin/should_cache.sh" "$INPUT_IGNORE_CACHE"'
+
     - name: "Determine Composer paths"
       id: "composer"
       shell: "bash"
@@ -79,11 +87,12 @@ runs:
         PHP_PATH: ${{ steps.php.outputs.path }}
         INPUT_COMPOSER_FILENAME: ${{ inputs.composer-filename }}
       run: |
-        ${GITHUB_ACTION_PATH}/bin/composer_paths.sh \
+        "${GITHUB_ACTION_PATH}/bin/composer_paths.sh" \
           "" \
           "$INPUT_WORKING_DIRECTORY" \
           "$PHP_PATH" \
           "$INPUT_COMPOSER_FILENAME"
+
     - name: "Determine cache key"
       id: "cache-key"
       if: steps.should-cache.outputs.do-cache == 1
@@ -98,7 +107,7 @@ runs:
         INPUT_CUSTOM_CACHE_SUFFIX: ${{ inputs.custom-cache-suffix }}
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
       run: |
-        ${GITHUB_ACTION_PATH}/bin/cache_key.sh \
+        "${GITHUB_ACTION_PATH}/bin/cache_key.sh" \
           "$RUNNER_OS_INPUT" \
           "$PHP_VERSION" \
           "$INPUT_DEPENDENCY_VERSIONS" \
@@ -107,6 +116,7 @@ runs:
           "$INPUT_CUSTOM_CACHE_KEY" \
           "$INPUT_CUSTOM_CACHE_SUFFIX" \
           "$INPUT_WORKING_DIRECTORY"
+
     - name: "Cache Composer dependencies"
       if: steps.should-cache.outputs.do-cache == 1
       uses: "chainguard-actions/actions-cache@bf3571dc23f0f3563eb28d6e1ac2a52ee32fe125" # v5.0.3
@@ -115,6 +125,7 @@ runs:
         key: "${{ steps.cache-key.outputs.key }}"
         restore-keys: |
           ${{ env.CACHE_RESTORE_KEY }}
+
     - name: "Install Composer dependencies"
       shell: "bash"
       env:
@@ -123,16 +134,16 @@ runs:
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
         PHP_PATH: ${{ steps.php.outputs.path }}
         COMPOSER_COMMAND: ${{ steps.composer.outputs.composer_command }}
-        COMPOSER_LOCK: ${{ steps.composer.outputs.lock }}
+        COMPOSER_LOCK_PATH: ${{ steps.composer.outputs.lock }}
         INPUT_REQUIRE_LOCK_FILE: ${{ inputs.require-lock-file }}
         INPUT_COMPOSER_FILENAME: ${{ inputs.composer-filename }}
       run: |
-        ${GITHUB_ACTION_PATH}/bin/composer_install.sh \
+        "${GITHUB_ACTION_PATH}/bin/composer_install.sh" \
           "$INPUT_DEPENDENCY_VERSIONS" \
           "$INPUT_COMPOSER_OPTIONS" \
           "$INPUT_WORKING_DIRECTORY" \
           "$PHP_PATH" \
           "$COMPOSER_COMMAND" \
-          "$COMPOSER_LOCK" \
+          "$COMPOSER_LOCK_PATH" \
           "$INPUT_REQUIRE_LOCK_FILE" \
           "$INPUT_COMPOSER_FILENAME" \
